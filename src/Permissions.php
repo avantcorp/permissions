@@ -2,6 +2,7 @@
 
 namespace Avant\Permissions;
 
+use Avant\Permissions\Permission as PermissionAttribute;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use ReflectionAttribute;
@@ -14,8 +15,15 @@ use Symfony\Component\Finder\Finder;
 
 class Permissions
 {
+    public const string ADMIN_ROLE = 'superuser';
+
     public function publish(): void
     {
+        config('permission.models.role')::query()
+            ->firstOrCreate([
+                'name'       => static::ADMIN_ROLE,
+            ]);
+
         $permissions = $this
             ->all()
             ->diff(Permission::query()->pluck('name'));
@@ -62,7 +70,7 @@ class Permissions
                         ->filter(
                             fn (ReflectionMethod $method): bool => collect($method->getAttributes())
                                 ->map(fn (ReflectionAttribute $attribute) => $attribute->getName())
-                                ->contains(Permission::class)
+                                ->contains(PermissionAttribute::class)
                         )
                         ->map(fn (ReflectionMethod $method): string => $method->getName())
                         ->crossJoin($policyName)
@@ -84,7 +92,7 @@ class Permissions
             Finder::create()
                 ->files()
                 ->name('*.php')
-                ->in(config('permissions.policy_path'))
+                ->in(config('permission.policy_path'))
                 ->getIterator()
         )
             ->map(

@@ -8,7 +8,7 @@ class PermissionsServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__.'/../config/permissions.php', 'permissions');
+        $this->mergeConfigFrom(__DIR__.'/../config/permission.php', 'permission');
 
         $this->app->singleton(Permissions::class, fn () => new Permissions());
     }
