@@ -1,0 +1,24 @@
+{
+    "name": "avantcorp/permissions",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^8.2",
+        "spatie/laravel-permission": "^6.18"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "Avant\\Permissions\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Avant\\Permissions\\PermissionsServiceProvider"
+            ]
+        }
+    }
+}
