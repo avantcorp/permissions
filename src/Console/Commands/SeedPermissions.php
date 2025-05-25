@@ -17,7 +17,7 @@ use Symfony\Component\Finder\Finder;
 
 class SeedPermissions extends Command
 {
-    protected $signature = 'permission:seed';
+    protected $signature = 'permission:seed {guard?}';
     protected $description = 'Read policy permissions and seed the database';
 
     public function handle(): int
@@ -28,9 +28,12 @@ class SeedPermissions extends Command
         /** @var \Spatie\Permission\Models\Permission $permissionModel */
         $permissionModel = config('permission.models.permission');
 
+        $guard = $this->argument('guard') ?: config('auth.defaults.guard');
+
         $roleModel::query()
             ->firstOrCreate([
-                'name' => Permission::SUPERUSER,
+                'name'       => Permission::SUPERUSER,
+                'guard_name' => $guard,
             ]);
 
         $permissions = $this
@@ -43,7 +46,7 @@ class SeedPermissions extends Command
                     $permissions
                         ->map(fn (string $name): array => [
                             'name'       => $name,
-                            'guard_name' => 'web',
+                            'guard_name' => $guard,
                             'created_at' => now(),
                             'updated_at' => now(),
                         ])
