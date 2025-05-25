@@ -1,8 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Avant\Permissions;
 
-use Illuminate\Foundation\Auth\User;
+use Illuminate\Contracts\Auth\Access\Authorizable;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -13,14 +15,12 @@ class PermissionsServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../config/permission.php', 'permission');
-
-        $this->app->singleton(Permissions::class, fn () => new Permissions());
     }
 
     public function boot(): void
     {
-        Gate::after(function (User $user, $ability, $result, $arguments): bool {
-            return !is_null($result) ? $result : $user->hasRole(Permissions::ADMIN_ROLE);
+        Gate::after(function (Authorizable $authorizable, $ability, $result, $arguments): bool {
+            return !is_null($result) ? $result : $authorizable->hasRole(Permission::SUPERUSER);
         });
 
         Gate::guessPolicyNamesUsing(function ($class) {
@@ -32,21 +32,27 @@ class PermissionsServiceProvider extends ServiceProvider
                 return $class;
             }
 
-            return Arr::wrap(Collection::times(count($classDirnameSegments),
+            return Arr::wrap(Collection::times(
+                count($classDirnameSegments),
                 function ($index) use ($class, $classDirnameSegments) {
                     $classDirname = implode('\\', array_slice($classDirnameSegments, 0, $index));
 
                     return $classDirname.'\\Policies\\'.class_basename($class).'Policy';
-                })->when(str_contains($classDirname, '\\Models\\'), function ($collection) use ($class, $classDirname) {
+                }
+            )->when(str_contains($classDirname, '\\Models\\'), function ($collection) use ($class, $classDirname) {
                 return $collection->concat([
-                    str_replace('\\Models\\',
+                    str_replace(
+                        '\\Models\\',
                         '\\Policies\\',
-                        $classDirname).'\\'.class_basename($class).'Policy',
+                        $classDirname
+                    ).'\\'.class_basename($class).'Policy',
                 ])
                     ->concat([
-                        str_replace('\\Models\\',
+                        str_replace(
+                            '\\Models\\',
                             '\\Models\\Policies\\',
-                            $classDirname).'\\'.class_basename($class).'Policy',
+                            $classDirname
+                        ).'\\'.class_basename($class).'Policy',
                     ]);
             })->reverse()->values()->first(function ($class) {
                 return class_exists($class);

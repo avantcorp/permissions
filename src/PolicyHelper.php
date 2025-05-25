@@ -1,8 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Avant\Permissions;
 
-use Illuminate\Foundation\Auth\User;
+use Illuminate\Contracts\Auth\Access\Authorizable;
 
 trait PolicyHelper
 {
@@ -14,10 +16,11 @@ trait PolicyHelper
             ->toString();
     }
 
-    protected function hasPermission(User $user): ?bool
+    /** @param \Spatie\Permission\Traits\HasRoles $authorizable */
+    protected function hasPermission(Authorizable $authorizable): ?bool
     {
         $functionName = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['function'];
 
-        return $user->hasPermissionTo($functionName.$this->getPolicyModel()) ?: null;
+        return $authorizable->hasPermissionTo($functionName.$this->getPolicyModel()) ?: null;
     }
 }

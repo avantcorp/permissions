@@ -1,35 +1,44 @@
 <?php
 
-namespace Avant\Permissions;
+declare(strict_types=1);
 
-use Avant\Permissions\Permission as PermissionAttribute;
+namespace Avant\Permissions\Console\Commands;
+
+use Avant\Permissions\Permission;
+use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
 use Spatie\Permission\Commands\CacheReset;
-use Spatie\Permission\Models\Permission;
 use SplFileInfo;
 use Symfony\Component\Finder\Finder;
 
-class Permissions
+class SeedPermissions extends Command
 {
-    public const string ADMIN_ROLE = 'superuser';
+    protected $signature = 'permission:seed';
+    protected $description = 'Read policy permissions and seed the database';
 
-    public function publish(): void
+    public function handle(): int
     {
-        config('permission.models.role')::query()
+        /** @var \Spatie\Permission\Models\Role $roleModel */
+        $roleModel = config('permission.models.role');
+
+        /** @var \Spatie\Permission\Models\Permission $permissionModel */
+        $permissionModel = config('permission.models.permission');
+
+        $roleModel::query()
             ->firstOrCreate([
-                'name'       => static::ADMIN_ROLE,
+                'name' => Permission::SUPERUSER,
             ]);
 
         $permissions = $this
             ->all()
-            ->diff(Permission::query()->pluck('name'));
+            ->diff($permissionModel::query()->pluck('name'));
 
         if ($permissions->isNotEmpty()) {
-            Permission::query()
+            $permissionModel::query()
                 ->insert(
                     $permissions
                         ->map(fn (string $name): array => [
@@ -42,11 +51,13 @@ class Permissions
                 );
         }
 
-        Permission::query()
+        $permissionModel::query()
             ->whereNotIn('name', $this->all())
             ->delete();
 
         Artisan::call(CacheReset::class);
+
+        return static::SUCCESS;
     }
 
     public function byGroup(): Collection
@@ -70,7 +81,7 @@ class Permissions
                         ->filter(
                             fn (ReflectionMethod $method): bool => collect($method->getAttributes())
                                 ->map(fn (ReflectionAttribute $attribute) => $attribute->getName())
-                                ->contains(PermissionAttribute::class)
+                                ->contains(Permission::class)
                         )
                         ->map(fn (ReflectionMethod $method): string => $method->getName())
                         ->crossJoin($policyName)

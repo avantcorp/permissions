@@ -7,4 +7,7 @@ namespace Avant\Permissions;
 use Attribute;
 
 #[Attribute]
-class Permission {}
+class Permission
+{
+    public const string SUPERUSER = 'superuser';
+}

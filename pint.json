@@ -1,0 +1,25 @@
+{
+    "preset": "psr12",
+    "rules": {
+        "array_indentation": true,
+        "concat_space": {
+            "spacing": "none"
+        },
+        "declare_parentheses": true,
+        "declare_strict_types": true,
+        "explicit_string_variable": true,
+        "global_namespace_import": {
+            "import_classes": true,
+            "import_constants": true,
+            "import_functions": false
+        },
+        "ordered_traits": true,
+        "single_line_empty_body": true,
+        "void_return": true,
+        "binary_operator_spaces": {
+            "operators": {
+                "=>": "align_single_space_minimal_by_scope"
+            }
+        }
+    }
+}
