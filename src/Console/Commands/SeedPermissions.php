@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Avant\Permissions\Console\Commands;
 
 use Avant\Permissions\Permission;
+use Avant\Permissions\Policy;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
@@ -69,7 +70,7 @@ class SeedPermissions extends Command
             fn () => $this->policies()
                 ->flip()
                 ->map(fn ($_, string $classString): ReflectionClass => new ReflectionClass($classString))
-                ->keyBY(
+                ->keyBy(
                     fn (ReflectionClass $class, string $classString): string => str($classString)
                         ->classBasename()
                         ->beforeLast('Policy')
@@ -102,13 +103,13 @@ class SeedPermissions extends Command
 
     protected function policies(): Collection
     {
-        return collect(
-            Finder::create()
-                ->files()
-                ->name('*.php')
-                ->in(config('permission.policy_path'))
-                ->getIterator()
-        )
+        $files = Finder::create()
+            ->files()
+            ->name('*.php')
+            ->in(config('permission.policy_path'))
+            ->getIterator();
+
+        return collect($files)
             ->map(
                 fn (SplFileInfo $fileInfo) => str($fileInfo->getPathname())
                     ->after(base_path('/'))
@@ -117,6 +118,10 @@ class SeedPermissions extends Command
                     ->replace('/', '\\')
                     ->prepend('\\')
                     ->toString()
-            );
+            )
+            ->filter(fn(string $classString) => (
+                class_exists($classString)
+                && collect(class_implements($classString))->flip()->has(Policy::class)
+            ));
     }
 }
