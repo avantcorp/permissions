@@ -80,11 +80,6 @@ class Permissions
                         ReflectionClass $class,
                         string $policyName
                     ): Collection => collect($class->getMethods(ReflectionMethod::IS_PUBLIC))
-                        ->filter(
-                            fn (ReflectionMethod $method): bool => collect($method->getAttributes())
-                                ->map(fn (ReflectionAttribute $attribute) => $attribute->getName())
-                                ->contains(Permission::class)
-                        )
                         ->map(fn (ReflectionMethod $method): string => $method->getName())
                         ->mapWithKeys(fn (string $name): array => [
                             $databasePermissions->get($name.$policyName) => str(
