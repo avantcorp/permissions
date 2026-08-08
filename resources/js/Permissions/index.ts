@@ -10,22 +10,25 @@ export type PermissionType = {
 
 type BindingValue = string | number | PermissionType | null;
 
+// the arg is only split when the value doesn't already supply a model
+const parseArg = (arg: string, model?: string | null): PermissionType => (model ? { ability: arg, model: model, id: null } : (Permissions.parsePermission(arg) as PermissionType));
+
 const parseFromBinding = (binding: { arg?: string; value?: BindingValue }): PermissionType | null => {
     const value = binding.value ?? null;
     const arg = binding.arg ?? null;
 
-    // v-permission="{ ability, model, id }"
-    if (value !== null && typeof value === 'object') {
-        return Permissions.parsePermission({ ability: arg as string, ...value });
+    // v-permission="'ability-model'" or v-permission="{ ability, model, id }"
+    if (arg === null) {
+        return Permissions.parsePermission(value as PermissionType | string | null);
     }
 
-    // v-permission="'ability-model'"
-    if (arg === null) {
-        return Permissions.parsePermission(value as string | null);
+    // v-permission:ability="{ model, id }" or v-permission:ability-model="{ id }"
+    if (value !== null && typeof value === 'object') {
+        return { ...parseArg(arg, value.model), ...value };
     }
 
     // v-permission:ability-model="id"
-    return Permissions.parsePermission({ ability: arg, id: value, model: null });
+    return { ...parseArg(arg), id: value };
 };
 
 export default {
