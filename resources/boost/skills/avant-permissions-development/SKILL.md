@@ -174,6 +174,10 @@ app(Permissions::class)->all();      // [id => 'View Any Invoice', ...]
 
 Both return human-readable labels keyed by the permission's database id, suitable for a role editor.
 
+`byPolicy()` lists policies alphabetically by their display name, and the permissions inside each
+policy in the order their methods are declared in the class. Order the methods deliberately — that is
+the order a role editor will render them in.
+
 ## Configuration
 
 Config is merged from the package under the `permission` key (alongside spatie's own). Publish or
