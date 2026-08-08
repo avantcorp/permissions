@@ -9,7 +9,6 @@ use Illuminate\Container\Attributes\Singleton;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Stringable;
-use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
 use Symfony\Component\Finder\Finder;
@@ -89,7 +88,8 @@ class Permissions
                             ),
                         ])
                 )
-                ->keyBy(fn ($_, string $group) => str($group)
+                ->keyBy(
+                    fn ($_, string $group) => str($group)
                     ->split('/(?<=[A-Z])(?=[A-Z][a-z])|(?<=[^A-Z])(?=[A-Z])|(?<=[A-Za-z])(?=[^A-Za-z])/')
                     ->implode(' ')
                 )

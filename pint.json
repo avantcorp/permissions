@@ -2,10 +2,21 @@
     "preset": "psr12",
     "rules": {
         "array_indentation": true,
+        "attribute_empty_parentheses": true,
+        "binary_operator_spaces": {
+            "operators": {
+                "=>": "align_single_space_minimal_by_scope"
+            }
+        },
+        "blank_line_after_namespace": true,
+        "blank_line_after_opening_tag": true,
+        "class_keyword": true,
+        "compact_nullable_typehint": true,
         "concat_space": {
             "spacing": "none"
         },
         "declare_parentheses": true,
+        "date_time_immutable": true,
         "declare_strict_types": true,
         "explicit_string_variable": true,
         "global_namespace_import": {
@@ -13,13 +24,15 @@
             "import_constants": true,
             "import_functions": false
         },
+        "multiline_promoted_properties": {
+            "minimum_number_of_parameters": 1
+        },
+        "numeric_literal_separator": {
+            "override_existing": true,
+            "strategy": "use_separator"
+        },
         "ordered_traits": true,
         "single_line_empty_body": true,
-        "void_return": true,
-        "binary_operator_spaces": {
-            "operators": {
-                "=>": "align_single_space_minimal_by_scope"
-            }
-        }
+        "void_return": true
     }
 }

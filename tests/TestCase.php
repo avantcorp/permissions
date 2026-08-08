@@ -12,7 +12,6 @@ use Avant\Permissions\Tests\Fixtures\Models\User;
 use Avant\Permissions\Tests\Fixtures\Policies\CommentPolicy;
 use Avant\Permissions\Tests\Fixtures\Policies\PostPolicy;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Orchestra\Testbench\TestCase as Orchestra;

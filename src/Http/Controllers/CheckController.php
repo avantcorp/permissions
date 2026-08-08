@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Exception;
+use Throwable;
 
 class CheckController
 {
@@ -19,7 +20,7 @@ class CheckController
             ->map(function (array $permission): ?array {
                 try {
                     return $this->parse($permission);
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     return null;
                 }
             });
@@ -47,7 +48,7 @@ class CheckController
 
                     try {
                         return Gate::check($ability, $model);
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                         return false;
                     }
                 })
@@ -73,7 +74,7 @@ class CheckController
                         ->whereKey($ids)
                         ->get()
                         ->keyBy(fn ($record): string => (string) $record->getKey());
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     return null;
                 }
             });
@@ -100,20 +101,24 @@ class CheckController
             return $model;
         }
 
-        if (($baseModel = sprintf('%s\\%s',
-                config('permission.models_namespace'),
-                $model)) && class_exists($baseModel)) {
+        if (($baseModel = sprintf(
+            '%s\\%s',
+            config('permission.models_namespace'),
+            $model
+        )) && class_exists($baseModel)) {
             return $baseModel;
         }
 
-        if (($basePolicy = sprintf('%s\\%s',
-                config('permission.policies_namespace'),
-                $model)) && class_exists($basePolicy)) {
+        if (($basePolicy = sprintf(
+            '%s\\%s',
+            config('permission.policies_namespace'),
+            $model
+        )) && class_exists($basePolicy)) {
             return $basePolicy;
         }
 
         if (config('permission.modules.namespace')) {
-            $model = str_contains($model, '\\') ? $model : "$model\\$model";
+            $model = str_contains($model, '\\') ? $model : "{$model}\\{$model}";
             [$moduleName, $modelOrPolicy] = explode('\\', $model, 2);
             $module = sprintf('%s\\%s', config('permission.modules.namespace'), $moduleName);
             if ($moduleModel = sprintf('%s\\%s', $module, $modelOrPolicy)) {
