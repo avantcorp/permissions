@@ -108,8 +108,7 @@ invoked as a Composer script, so it has to be run by hand at least once.
 ## Writing policies
 
 A policy contributes permissions only if it implements the `Avant\Permissions\Policy` marker
-interface. Use the `PolicyHelper` trait so each method looks up its own permission name, and add a
-`#[UsePolicy]` attribute pointing the policy at itself.
+interface. Use the `PolicyHelper` trait so each method looks up its own permission name.
 
 ```php
 <?php
@@ -120,9 +119,7 @@ use App\Models\Invoice;
 use App\Models\User;
 use Avant\Permissions\Policy;
 use Avant\Permissions\PolicyHelper;
-use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 
-#[UsePolicy(InvoicePolicy::class)]
 class InvoicePolicy implements Policy
 {
     use PolicyHelper;
@@ -149,15 +146,15 @@ Things to get right:
   backtrace, so it must be called directly from the policy method it belongs to.
 - **Only public methods count.** Every public method becomes a seeded permission — keep helpers
   `protected` or `private`.
-- **Add `#[UsePolicy(SelfPolicy::class)]`.** `Gate::getPolicyFor()` reads `#[UsePolicy]` off whatever
-  class it is handed, so pointing the policy at itself is what lets the check endpoint resolve
-  `model: 'InvoicePolicy'`. Without it, a check sent by policy name silently returns `false`.
+- **A policy backed by a model doesn't need `#[UsePolicy]`.** Laravel's own convention already pairs
+  `Invoice` with `InvoicePolicy`, and checks are sent as `model: 'Invoice'`. The attribute is only
+  required for policies with no model behind them (below).
 - Abstract policies and interfaces are skipped; only instantiable classes are reflected.
 
 ### Policies with no model
 
-A policy doesn't need a model behind it. Because of `#[UsePolicy]`, the policy class is its own
-subject:
+A policy doesn't need a model behind it. Add `#[UsePolicy]` pointing the policy at itself — that's
+what makes the policy class its own subject:
 
 ```php
 #[UsePolicy(AdminPolicy::class)]
@@ -173,7 +170,9 @@ class AdminPolicy implements Policy
 ```
 
 `AdminPolicy::access` seeds `accessAdmin`, and the frontend refers to it as `model: 'AdminPolicy'`.
-There is no record to load, so these are always class-level checks.
+`Gate::getPolicyFor()` reads `#[UsePolicy]` off whatever class it is handed, so pointing the policy at
+itself is what lets the check endpoint resolve a check sent by policy name — without it that check
+silently returns `false`. There is no record to load, so these are always class-level checks.
 
 ## Seeding permissions
 

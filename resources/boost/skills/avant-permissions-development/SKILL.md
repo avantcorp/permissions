@@ -79,8 +79,7 @@ exporting `check`.
 ## Writing policies
 
 A policy only produces permissions if it implements the `Avant\Permissions\Policy` marker interface.
-Use the `PolicyHelper` trait so each method resolves its own permission name, and add a
-`#[UsePolicy]` attribute pointing at the policy itself:
+Use the `PolicyHelper` trait so each method resolves its own permission name:
 
 ```php
 <?php
@@ -91,9 +90,7 @@ use App\Models\Invoice;
 use App\Models\User;
 use Avant\Permissions\Policy;
 use Avant\Permissions\PolicyHelper;
-use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 
-#[UsePolicy(InvoicePolicy::class)]
 class InvoicePolicy implements Policy
 {
     use PolicyHelper;
@@ -114,10 +111,9 @@ Conventions to follow:
 
 - **Name the class `{Model}Policy`.** The trailing `Policy` is stripped and the remainder is appended
   to the method name to form the permission (`InvoicePolicy::update` → `updateInvoice`).
-- **Add `#[UsePolicy(SelfPolicy::class)]` to the policy, naming the policy itself.** The attribute is
-  what lets the check endpoint resolve `model: 'InvoicePolicy'` — `Gate::getPolicyFor()` reads
-  `#[UsePolicy]` off whatever class it is handed, so pointing the policy at itself makes the policy
-  class directly checkable. Without it, a check sent by policy name silently returns `false`.
+- **Do not add `#[UsePolicy]` to a policy that has a model behind it.** Laravel's own convention
+  already pairs `Invoice` with `InvoicePolicy`, and checks are sent as `model: 'Invoice'`. The
+  attribute is only needed for policies with no model (see below).
 - **Return `?bool`, and return `null` — not `false` — when the check does not pass.** `hasPermission()`
   already does this. A `null` result lets the superuser fallback (below) run; a hard `false` blocks it.
 - **Do not pass the permission name to `hasPermission()`.** It reads the calling method name from the
@@ -128,8 +124,11 @@ Conventions to follow:
 
 ### Policies with no model
 
-A policy does not need a model behind it. `#[UsePolicy]` is what makes this work: the policy class is
-its own subject, so `Gate` can check it directly and the frontend refers to it by its class basename.
+A policy does not need a model behind it. This is the one case that requires `#[UsePolicy]`, pointing
+the policy at itself: `Gate::getPolicyFor()` reads the attribute off whatever class it is handed, so a
+self-referencing attribute makes the policy class its own subject and directly checkable. Without it,
+a check sent by policy name silently returns `false`. The frontend then refers to the policy by its
+class basename.
 
 ```php
 #[UsePolicy(AdminPolicy::class)]
@@ -195,8 +194,8 @@ Notes:
 
 - `model` may be a bare model name (`Invoice`), a fully-qualified class (`\App\Models\Invoice`, or
   with `/` separators), or a policy name (`InvoicePolicy`, `AdminPolicy`). It is resolved against
-  `permission.models_namespace`, `permission.policies_namespace`, and the module namespaces. Resolving
-  by policy name only works if the policy carries `#[UsePolicy(SelfPolicy::class)]`.
+  `permission.models_namespace`, `permission.policies_namespace`, and the module namespaces. Sending a
+  model-less policy by name only works because that policy carries `#[UsePolicy(SelfPolicy::class)]`.
 - Passing an `id` makes the check load that record and run a model-level policy check. Without an
   `id`, the check is class-level.
 - Checks are deduplicated and batched: the plugin waits ~100 ms, then posts all pending checks in one
