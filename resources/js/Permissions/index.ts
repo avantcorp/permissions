@@ -4,34 +4,28 @@ import Permissions from './Permissions';
 
 export type PermissionType = {
     ability?: string;
-    model: string | null;
+    model?: string | null;
     id?: number | string | null;
 };
 
-const parseFromBinding = (binding: { arg?: string; value?: string | PermissionType }): PermissionType | null => {
+type BindingValue = string | number | PermissionType | null;
+
+const parseFromBinding = (binding: { arg?: string; value?: BindingValue }): PermissionType | null => {
     const value = binding.value ?? null;
+    const arg = binding.arg ?? null;
 
-    if (value === null && typeof binding.arg === 'undefined') {
-        return null;
-    } else if (value === null && typeof binding.arg === 'string') {
-        return { ability: binding.arg, id: null, model: null };
-    } else if (typeof value === 'string' && typeof binding.arg === 'undefined') {
-        return { ability: value, id: null, model: null };
-    } else if ((typeof value === 'string' || typeof value === 'number') && typeof binding.arg === 'string' && binding.arg.includes('-')) {
-        const [ability, model] = binding.arg.split('-');
-
-        return { ability: ability, id: value, model: model };
-    } else if (typeof value === 'string' && typeof binding.arg === 'string') {
-        return { ability: binding.arg, id: null, model: value };
+    // v-permission="{ ability, model, id }"
+    if (value !== null && typeof value === 'object') {
+        return Permissions.parsePermission({ ability: arg as string, ...value });
     }
 
-    const permission = value as PermissionType;
+    // v-permission="'ability-model'"
+    if (arg === null) {
+        return Permissions.parsePermission(value as string | null);
+    }
 
-    return {
-        ability: (permission.ability ?? binding.arg) as string,
-        id: permission.id,
-        model: permission.model,
-    };
+    // v-permission:ability-model="id"
+    return Permissions.parsePermission({ ability: arg, id: value, model: null });
 };
 
 export default {

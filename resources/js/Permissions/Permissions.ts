@@ -84,7 +84,19 @@ export default {
         }
 
         if (typeof permission === 'string') {
+            if (permission.includes('-')) {
+                const [ability, model] = permission.split('-');
+
+                return { ability: ability, model: model, id: null };
+            }
+
             return { ability: permission, model: null, id: null };
+        }
+
+        if (permission.ability && permission.ability.includes('-') && !permission.model) {
+            const [ability, model] = permission.ability.split('-');
+
+            return { ...permission, ability: ability, model: model };
         }
 
         return permission;
