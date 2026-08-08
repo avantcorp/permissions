@@ -32,7 +32,7 @@ jobs:
           coverage: none
 
       - name: Cache composer downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/composer/files
           key: composer-${{ matrix.php }}-${{ matrix.deps }}-${{ hashFiles('composer.json') }}
@@ -61,7 +61,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: '22'
+          node-version: 'lts/*'
           cache: npm
 
       - run: npm ci
