@@ -38,16 +38,23 @@ php artisan vendor:publish --tag="permission-migrations"
 php artisan migrate
 ```
 
-Two things have to be wired up by your application.
+Three things have to be wired up by your application.
 
-**1. Register the check route**, usually in `routes/web.php`. This registers a `POST` route named
-`permissions.check`, behind the `web` and `auth` middleware:
+**1. Register the check route** from the `then` callback in `bootstrap/app.php`. It registers a
+`POST` route named `permissions.check`, behind the `web` and `auth` middleware:
 
 ```php
-use Avant\Permissions\Permissions;
-
-Permissions::route('/permissions/check');
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        //...
+        then: function (): void {
+            //...
+            Avant\Permissions\Permissions::route('permissions/check');
+        }
+    )
 ```
+
+The route applies its own middleware, so it doesn't need a `Route::middleware(...)` group around it.
 
 **2. Install the Vue plugin** in `resources/js/app.ts`:
 
@@ -61,9 +68,28 @@ createInertiaApp({
 });
 ```
 
-The frontend expects your app to share `auth.permissions` (permission names) and `auth.roles` (role
-names) as Inertia page props, and to expose a Wayfinder route module at `@/routes/permissions`
-exporting `check`.
+**3. Share `auth.permissions` and `auth.roles`** as Inertia page props, in
+`app/Http/Middleware/HandleInertiaRequests.php`:
+
+```php
+public function share(Request $request): array
+{
+    return [
+        ...parent::share($request),
+        'auth' => inertia()->once(fn () => transform($request->user(), fn (User $user): array => [
+            //...
+            'permissions' => collect($user->getAllPermissions())->pluck('name'),
+            'roles'       => $user->getRoleNames(),
+        ])),
+    ];
+}
+```
+
+`once()` evaluates the closure a single time per request rather than on every partial reload, and
+`transform()` leaves the prop `null` for guests. The plugin reads `auth.permissions` to answer
+class-level checks without a request, and `auth.roles` for `v-role`.
+
+Your app also has to expose a Wayfinder route module at `@/routes/permissions` exporting `check`.
 
 ### Laravel Boost skill
 

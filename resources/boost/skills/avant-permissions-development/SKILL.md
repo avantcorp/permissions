@@ -26,15 +26,21 @@ endpoint that runs the real `Gate` on the server.
 
 ## Setup
 
-The service provider is auto-discovered. Two things must be wired up by the application:
+The service provider is auto-discovered. Three things must be wired up by the application:
 
-1. **Register the check route** (usually in `routes/web.php`). This registers `POST` at the given
-   path, named `permissions.check`, with the `web` and `auth` middleware:
+1. **Register the check route** from the `then` callback in `bootstrap/app.php`. This registers
+   `POST` at the given path, named `permissions.check`, with the `web` and `auth` middleware — it
+   applies its own middleware, so no surrounding `Route::middleware(...)` group is needed:
 
 ```php
-use Avant\Permissions\Permissions;
-
-Permissions::route('/permissions/check');
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        //...
+        then: function (): void {
+            //...
+            Avant\Permissions\Permissions::route('permissions/check');
+        }
+    )
 ```
 
 2. **Install the Vue plugin** in `resources/js/app.ts`:
@@ -44,14 +50,31 @@ import Permissions from '../../vendor/avantcorp/permissions/resources/js/Permiss
 
 createInertiaApp({
     withApp(app) {
-        app.use(Permissions).use(AutoFocus).use(HotKey);
+        app.use(Permissions);
     },
 });
 ```
 
-The frontend expects the host application to share `auth.permissions` (array of permission names)
-and `auth.roles` (array of role names) as Inertia page props, and to expose a Wayfinder route module
-at `@/routes/permissions` exporting `check`.
+3. **Share `auth.permissions` and `auth.roles`** as Inertia page props, in
+   `app/Http/Middleware/HandleInertiaRequests.php`:
+
+```php
+public function share(Request $request): array
+{
+    return [
+        ...parent::share($request),
+        'auth' => inertia()->once(fn () => transform($request->user(), fn (User $user): array => [
+            //...
+            'permissions' => collect($user->getAllPermissions())->pluck('name'),
+            'roles'       => $user->getRoleNames(),
+        ])),
+    ];
+}
+```
+
+`once()` keeps the closure from re-running on partial reloads; `transform()` leaves the prop `null`
+for guests. The host application must also expose a Wayfinder route module at `@/routes/permissions`
+exporting `check`.
 
 ## Writing policies
 
