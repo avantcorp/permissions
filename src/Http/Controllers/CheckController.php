@@ -7,6 +7,7 @@ namespace Avant\Permissions\Http\Controllers;
 use Avant\Permissions\Http\Requests\CheckRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
+use Exception;
 
 class CheckController
 {
@@ -44,11 +45,26 @@ class CheckController
 
     private function findModel(string $model): string
     {
+        $model = str_replace('/', '\\', $model);
+
         if (str_contains($model, '\\') && class_exists($model)) {
             return $model;
         }
 
-        if (str_contains($model, '\\') && config('permission.modules.namespace')) {
+        if (($baseModel = sprintf('%s\\%s',
+                config('permission.models_namespace'),
+                $model)) && class_exists($baseModel)) {
+            return $baseModel;
+        }
+
+        if (($basePolicy = sprintf('%s\\%s',
+                config('permission.policies_namespace'),
+                $model)) && class_exists($basePolicy)) {
+            return $basePolicy;
+        }
+
+        if (config('permission.modules.namespace')) {
+            $model = str_contains($model, '\\') ? $model : "$model\\$model";
             [$moduleName, $modelOrPolicy] = explode('\\', $model, 2);
             $module = sprintf('%s\\%s', config('permission.modules.namespace'), $moduleName);
             if ($moduleModel = sprintf('%s\\%s', $module, $modelOrPolicy)) {
@@ -60,14 +76,6 @@ class CheckController
             }
         }
 
-        if ($baseModel = sprintf('%s\\%s', config('permission.models_namespace'), $model)) {
-            return $baseModel;
-        }
-
-        if ($basePolicy = sprintf('%s\\%s', config('permission.policies_namespace'), $model)) {
-            return $basePolicy;
-        }
-
-        throw new \Exception('Model or Policy not found');
+        throw new Exception('Model or Policy not found');
     }
 }
