@@ -6,8 +6,6 @@ namespace Avant\Permissions;
 
 use Avant\Permissions\Console\Commands\SeedPermissions;
 use Illuminate\Contracts\Auth\Access\Authorizable;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -25,7 +23,7 @@ class PermissionsServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::after(function (Authorizable $authorizable, $ability, $result, $arguments): bool {
-            return !is_null($result) ? $result : $authorizable->hasRole(Permission::SUPERUSER);
+            return !is_null($result) ? $result : $authorizable->hasRole(Permissions::SUPERUSER);
         });
     }
 }

@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Avant\Permissions\Console\Commands;
 
-use Avant\Permissions\Permission;
+use Avant\Permissions\Permissions;
 use Avant\Permissions\Policy;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
-use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
 use Spatie\Permission\Commands\CacheReset;
@@ -33,7 +32,7 @@ class SeedPermissions extends Command
 
         $roleModel::query()
             ->firstOrCreate([
-                'name'       => Permission::SUPERUSER,
+                'name'       => Permissions::SUPERUSER,
                 'guard_name' => $guard,
             ]);
 
@@ -82,11 +81,6 @@ class SeedPermissions extends Command
                         ReflectionClass $class,
                         string $policyName
                     ): Collection => collect($class->getMethods(ReflectionMethod::IS_PUBLIC))
-                        ->filter(
-                            fn (ReflectionMethod $method): bool => collect($method->getAttributes())
-                                ->map(fn (ReflectionAttribute $attribute) => $attribute->getName())
-                                ->contains(Permission::class)
-                        )
                         ->map(fn (ReflectionMethod $method): string => $method->getName())
                         ->crossJoin($policyName)
                         ->map(fn ($parts): string => implode('', $parts))
@@ -119,7 +113,7 @@ class SeedPermissions extends Command
                     ->prepend('\\')
                     ->toString()
             )
-            ->filter(fn(string $classString) => (
+            ->filter(fn (string $classString) => (
                 class_exists($classString)
                 && collect(class_implements($classString))->flip()->has(Policy::class)
             ));

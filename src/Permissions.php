@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Avant\Permissions;
 
+use Avant\Permissions\Http\Controllers\CheckController;
 use Illuminate\Container\Attributes\Singleton;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Stringable;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -15,8 +17,10 @@ use Symfony\Component\Finder\Iterator\PathFilterIterator;
 use Symfony\Component\Finder\SplFileInfo;
 
 #[Singleton]
-class PermissionService
+class Permissions
 {
+    public const string SUPERUSER = 'superuser';
+
     /** @return Collection<class-string, string> */
     protected function policies(): Collection
     {
@@ -51,7 +55,7 @@ class PermissionService
     {
         return once(fn () => with(
             config('permission.models.permission'),
-            fn(string $model) => $model::query()->pluck('id', 'name')
+            fn (string $model) => $model::query()->pluck('id', 'name')
         ));
     }
 
@@ -113,5 +117,12 @@ class PermissionService
                 ->values()
                 ->collapseWithKeys()
         );
+    }
+
+    public static function route(string $path): void
+    {
+        Route::post($path, CheckController::class)
+            ->middleware(['web', 'auth'])
+            ->name('permissions.check');
     }
 }
