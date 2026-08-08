@@ -56,7 +56,8 @@ at `@/routes/permissions` exporting `check`.
 ## Writing policies
 
 A policy only produces permissions if it implements the `Avant\Permissions\Policy` marker interface.
-Use the `PolicyHelper` trait so each method resolves its own permission name:
+Use the `PolicyHelper` trait so each method resolves its own permission name, and add a
+`#[UsePolicy]` attribute pointing at the policy itself:
 
 ```php
 <?php
@@ -67,7 +68,9 @@ use App\Models\Invoice;
 use App\Models\User;
 use Avant\Permissions\Policy;
 use Avant\Permissions\PolicyHelper;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 
+#[UsePolicy(InvoicePolicy::class)]
 class InvoicePolicy implements Policy
 {
     use PolicyHelper;
@@ -88,6 +91,10 @@ Conventions to follow:
 
 - **Name the class `{Model}Policy`.** The trailing `Policy` is stripped and the remainder is appended
   to the method name to form the permission (`InvoicePolicy::update` → `updateInvoice`).
+- **Add `#[UsePolicy(SelfPolicy::class)]` to the policy, naming the policy itself.** The attribute is
+  what lets the check endpoint resolve `model: 'InvoicePolicy'` — `Gate::getPolicyFor()` reads
+  `#[UsePolicy]` off whatever class it is handed, so pointing the policy at itself makes the policy
+  class directly checkable. Without it, a check sent by policy name silently returns `false`.
 - **Return `?bool`, and return `null` — not `false` — when the check does not pass.** `hasPermission()`
   already does this. A `null` result lets the superuser fallback (below) run; a hard `false` blocks it.
 - **Do not pass the permission name to `hasPermission()`.** It reads the calling method name from the
@@ -95,6 +102,28 @@ Conventions to follow:
 - **Only public methods count.** Every public method on the policy becomes a seeded permission, so
   keep helpers `protected` or `private`.
 - Abstract policies and interfaces are skipped; only instantiable classes are reflected.
+
+### Policies with no model
+
+A policy does not need a model behind it. `#[UsePolicy]` is what makes this work: the policy class is
+its own subject, so `Gate` can check it directly and the frontend refers to it by its class basename.
+
+```php
+#[UsePolicy(AdminPolicy::class)]
+class AdminPolicy implements Policy
+{
+    use PolicyHelper;
+
+    public function access(User $user): ?bool
+    {
+        return $this->hasPermission($user);
+    }
+}
+```
+
+`AdminPolicy::access` seeds the permission `accessAdmin` (the trailing `Policy` is stripped as usual),
+and the check is written `v-permission="{ ability: 'access', model: 'AdminPolicy' }"`. There is no `id`
+to send, so these are always class-level checks.
 
 ## Superuser bypass
 
@@ -142,12 +171,15 @@ the check fails, and carries `v-cloak` until the answer arrives:
 Notes:
 
 - `model` may be a bare model name (`Invoice`), a fully-qualified class (`\App\Models\Invoice`, or
-  with `/` separators), or a policy name (`InvoicePolicy`). It is resolved against
-  `permission.models_namespace`, `permission.policies_namespace`, and the module namespaces.
+  with `/` separators), or a policy name (`InvoicePolicy`, `AdminPolicy`). It is resolved against
+  `permission.models_namespace`, `permission.policies_namespace`, and the module namespaces. Resolving
+  by policy name only works if the policy carries `#[UsePolicy(SelfPolicy::class)]`.
 - Passing an `id` makes the check load that record and run a model-level policy check. Without an
   `id`, the check is class-level.
 - Checks are deduplicated and batched: the plugin waits ~100 ms, then posts all pending checks in one
-  request to `permissions.check` and caches results per key for the page's lifetime.
+  request to `permissions.check` and caches results per key for the page's lifetime. Server-side, the
+  endpoint groups every check that carries an `id` by model and loads them with a single
+  `whereKey()` query per model, so a batch costs one query per distinct model rather than one per check.
 - Class-level checks with no `id` are answered from the shared `auth.permissions` prop without a
   request when the permission is obviously absent.
 - The `v-role` directive checks the shared `auth.roles` prop instead of the `Gate`, so it needs no

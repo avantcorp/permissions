@@ -6,6 +6,7 @@ namespace Avant\Permissions\Http\Controllers;
 
 use Avant\Permissions\Http\Requests\CheckRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Exception;
 
@@ -13,19 +14,69 @@ class CheckController
 {
     public function __invoke(CheckRequest $request): JsonResponse
     {
+        $parsed = $request
+            ->collect()
+            ->map(function (array $permission): ?array {
+                try {
+                    return $this->parse($permission);
+                } catch (\Throwable $e) {
+                    return null;
+                }
+            });
+
+        $models = $this->loadModels($parsed);
+
         return response()
             ->json(
-                $request
-                    ->collect()
-                    ->map(function (array $permission): bool {
-                        try {
-                            [$ability, $model] = $this->parse($permission);
-                            return Gate::check($ability, $model);
-                        } catch (\Throwable $e) {
+                $parsed->map(function (?array $permission) use ($models): bool {
+                    if ($permission === null) {
+                        return false;
+                    }
+
+                    [$ability, $model, $id] = $permission;
+
+                    if ($id) {
+                        $loaded = $models->get($model);
+
+                        if ($loaded === null) {
                             return false;
                         }
-                    })
+
+                        $model = $loaded->get((string) $id);
+                    }
+
+                    try {
+                        return Gate::check($ability, $model);
+                    } catch (\Throwable $e) {
+                        return false;
+                    }
+                })
             );
+    }
+
+    /**
+     * Load every model referenced by id in a single query per class.
+     *
+     * Returns a map of class name => keyed models, or class name => null when
+     * the class could not be queried.
+     */
+    private function loadModels(Collection $parsed): Collection
+    {
+        return $parsed
+            ->filter(fn (?array $permission): bool => $permission !== null && (bool) $permission[2])
+            ->groupBy(fn (array $permission): string => $permission[1])
+            ->map(function (Collection $permissions, string $model): ?Collection {
+                $ids = $permissions->map(fn (array $permission) => $permission[2])->unique()->values();
+
+                try {
+                    return $model::query()
+                        ->whereKey($ids)
+                        ->get()
+                        ->keyBy(fn ($record): string => (string) $record->getKey());
+                } catch (\Throwable $e) {
+                    return null;
+                }
+            });
     }
 
     private function parse($permission): array
@@ -38,9 +89,7 @@ class CheckController
             [$ability, $model] = explode('-', $ability);
         }
 
-        $model = $this->findModel($model);
-
-        return [$ability, $id ? $model::query()->find($id) : $model];
+        return [$ability, ltrim($this->findModel($model), '\\'), $id];
     }
 
     private function findModel(string $model): string

@@ -7,18 +7,33 @@
         "spatie/laravel-permission": "^6.18"
     },
     "require-dev": {
-        "orchestra/testbench": "^10.3"
+        "orchestra/testbench": "^10.3|^11.0",
+        "pestphp/pest": "^5.0",
+        "pestphp/pest-plugin-laravel": "^5.0"
     },
     "autoload": {
         "psr-4": {
             "Avant\\Permissions\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Avant\\Permissions\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "pest"
+    },
     "extra": {
         "laravel": {
             "providers": [
                 "Avant\\Permissions\\PermissionsServiceProvider"
             ]
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
         }
     }
 }
