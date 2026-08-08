@@ -88,7 +88,6 @@ class Permissions
                                     ->implode(' ')
                             ),
                         ])
-                        ->sort()
                 )
                 ->keyBy(fn ($_, string $group) => str($group)
                     ->split('/(?<=[A-Z])(?=[A-Z][a-z])|(?<=[^A-Z])(?=[A-Z])|(?<=[A-Za-z])(?=[^A-Za-z])/')
