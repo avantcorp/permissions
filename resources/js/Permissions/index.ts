@@ -60,7 +60,7 @@ export default {
 
                 el.setAttribute('v-cloak', '');
 
-                if (!usePage().props.auth.roles.includes(role)) {
+                if (usePage().props.auth.roles.includes(role)) {
                     el.removeAttribute('v-cloak');
                 } else {
                     el.parentElement?.removeChild(el);
